@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorkPulse - Attendance & HR Management</title>
+    
+    <!-- Google Fonts & Font Awesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ==================== LOGIN SCREEN ==================== -->
+    <div id="loginContainer" class="login-container">
+        <div class="login-card">
+            <div class="brand">
+                <i class="fa-solid fa-users-gear brand-icon"></i>
+                <h2>WorkPulse</h2>
+            </div>
+            <p class="login-subtitle">Sign in to your account</p>
+            
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="input-group">
+                    <label for="loginRole">Select Role</label>
+                    <select id="loginRole" required onchange="onRoleSelectChange()">
+                        <option value="employee">Employee</option>
+                        <option value="manager">Department Manager</option>
+                        <option value="admin">HR / Admin</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label for="loginUser">Employee / User ID</label>
+                    <select id="loginUser" required>
+                        <!-- Populated Dynamically via JS -->
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fa-solid fa-right-to-bracket"></i> Login
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MAIN APP LAYOUT ==================== -->
+    <div id="appContainer" class="app-layout hidden">
+        
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-users-gear brand-icon"></i>
+                <h2>WorkPulse</h2>
+            </div>
+            <nav class="nav-menu" id="navMenu">
+                <!-- Navigation buttons generated dynamically based on role -->
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-power-off"></i> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <!-- TOP HEADER -->
+            <header class="top-header">
+                <div class="header-left">
+                    <button class="mobile-toggle" onclick="toggleSidebar()">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div>
+                        <h1 id="pageTitle">Dashboard Overview</h1>
+                        <p id="userRoleBadge" class="user-role-badge">Role: Guest</p>
+                    </div>
+                </div>
+                <div class="header-user">
+                    <div class="user-info">
+                        <span id="headerUserName" class="user-name">User</span>
+                        <span id="headerUserDept" class="user-dept">Department</span>
+                    </div>
+                    <div class="avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                </div>
+            </header>
+
+            <!-- DASHBOARD SECTION -->
+            <section id="dashboard" class="section">
+                <div class="cards-grid">
+                    <div class="card metric-card border-blue" id="metricCardTotal">
+                        <div class="metric-info">
+                            <span class="title">Total System Employees</span>
+                            <p class="value" id="totalEmployees">0</p>
+                        </div>
+                        <div class="metric-icon bg-blue"><i class="fa-solid fa-users"></i></div>
+                    </div>
+
+                    <div class="card metric-card border-green">
+                        <div class="metric-info">
+                            <span class="title">Present Today</span>
+                            <p class="value" id="presentToday">0</p>
+                        </div>
+                        <div class="metric-icon bg-green"><i class="fa-solid fa-user-check"></i></div>
+                    </div>
+
+                    <div class="card metric-card border-red">
+                        <div class="metric-info">
+                            <span class="title">Absent Today</span>
+                            <p class="value" id="absentToday">0</p>
+                        </div>
+                        <div class="metric-icon bg-red"><i class="fa-solid fa-user-xmark"></i></div>
+                    </div>
+
+                    <div class="card metric-card border-amber">
+                        <div class="metric-info">
+                            <span class="title">Pending Leaves</span>
+                            <p class="value" id="pendingLeaves">0</p>
+                        </div>
+                        <div class="metric-icon bg-amber"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                    </div>
+                </div>
+
+                <!-- CHARTS ROW -->
+                <div class="charts-grid mt-4">
+                    <div class="card">
+                        <h3><i class="fa-solid fa-chart-pie"></i> Attendance Breakdown</h3>
+                        <div class="chart-container">
+                            <canvas id="attendanceChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3><i class="fa-solid fa-chart-bar"></i> Department Wise Headcount</h3>
+                        <div class="chart-container">
+                            <canvas id="deptChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- EMPLOYEE MANAGEMENT (HR / Admin Only) -->
+            <section id="employees" class="section hidden">
+                <div class="card form-card">
+                    <h3><i class="fa-solid fa-user-plus"></i> Register New Employee</h3>
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label>Employee ID</label>
+                            <input type="text" id="empId" placeholder="e.g. E005">
+                        </div>
+                        <div class="input-group">
+                            <label>Full Name</label>
+                            <input type="text" id="empName" placeholder="e.g. John Doe">
+                        </div>
+                        <div class="input-group">
+                            <label>Department</label>
+                            <select id="empDept">
+                                <option value="IT">IT</option>
+                                <option value="HR">HR</option>
+                                <option value="Finance">Finance</option>
+                                <option value="Marketing">Marketing</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Job Designation</label>
+                            <input type="text" id="empRole" placeholder="e.g. Developer">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary mt-3" onclick="addEmployee()">
+                        <i class="fa-solid fa-plus"></i> Add Employee
+                    </button>
+                </div>
+
+                <div class="card table-card">
+                    <div class="table-header-flex">
+                        <h3><i class="fa-solid fa-list"></i> Employee Directory</h3>
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="empSearch" placeholder="Search by Name, ID or Dept..." onkeyup="filterEmployeeTable()">
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Department</th>
+                                    <th>Role</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employeeTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ATTENDANCE SECTION -->
+            <section id="attendance" class="section hidden">
+                
+                <!-- SELF MARKING CARD (Employee Role Only) -->
+                <div id="selfAttendanceCard" class="card form-card hidden">
+                    <h3><i class="fa-solid fa-user-clock"></i> Mark Today's Attendance</h3>
+                    <p class="text-muted">Today's Date: <strong id="currentDateStr"></strong></p>
+                    <div class="button-group mt-3">
+                        <button class="btn btn-success" onclick="markSelfAttendance('Present')">
+                            <i class="fa-solid fa-check"></i> Mark Present Today
+                        </button>
+                        <button class="btn btn-danger" onclick="markSelfAttendance('Absent')">
+                            <i class="fa-solid fa-xmark"></i> Mark Absent Today
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ADMIN ATTENDANCE MARKING (HR / Admin Only) -->
+                <div id="adminAttendanceCard" class="card filter-card hidden">
+                    <div class="input-group inline">
+                        <label for="attendanceDate"><i class="fa-regular fa-calendar"></i> Select Date:</label>
+                        <input type="date" id="attendanceDate" onchange="displayAttendance()">
+                    </div>
+                </div>
+
+                <!-- ATTENDANCE RECORDS TABLE -->
+                <div class="card table-card mt-3">
+                    <div class="table-header-flex">
+                        <h3><i class="fa-solid fa-clipboard-user"></i> Attendance Logs</h3>
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="attendanceSearch" placeholder="Search Name/ID..." onkeyup="filterAttendanceTable()">
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr id="attendanceTableHeader">
+                                    <th>Employee ID</th>
+                                    <th>Employee Name</th>
+                                    <th>Department</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th id="attendanceActionCol">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendanceTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- LEAVE MANAGEMENT SECTION -->
+            <section id="leave" class="section hidden">
+                <!-- LEAVE APPLICATION FORM (Employee Only) -->
+                <div id="leaveFormCard" class="card form-card hidden">
+                    <h3><i class="fa-solid fa-paper-plane"></i> Apply for Leave</h3>
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label>Leave Type</label>
+                            <select id="leaveType">
+                                <option value="Casual Leave">Casual Leave</option>
+                                <option value="Sick Leave">Sick Leave</option>
+                                <option value="Emergency Leave">Emergency Leave</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Leave Date</label>
+                            <input type="date" id="leaveDate">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary mt-3" onclick="applyLeave()">
+                        <i class="fa-solid fa-check"></i> Submit Leave Request
+                    </button>
+                </div>
+
+                <!-- LEAVE APPLICATIONS TABLE -->
+                <div class="card table-card">
+                    <div class="table-header-flex">
+                        <h3><i class="fa-solid fa-envelope-open-text"></i> Leave Requests</h3>
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="leaveSearch" placeholder="Search Name, Dept..." onkeyup="filterLeaveTable()">
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Department</th>
+                                    <th>Leave Type</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th id="leaveActionHeader">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaveTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- REPORTS SECTION (Manager & HR/Admin Only) -->
+            <section id="reports" class="section hidden">
+                <div class="card filter-card">
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label>Report Type</label>
+                            <select id="reportType">
+                                <option value="attendance">Attendance Report</option>
+                                <option value="leave">Leave Summary Report</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <button class="btn btn-primary mt-auto" onclick="generateReport()">
+                                <i class="fa-solid fa-file-export"></i> Generate & View Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card table-card mt-3">
+                    <h3><i class="fa-solid fa-table"></i> Generated Summary</h3>
+                    <div class="table-container">
+                        <table id="reportTable">
+                            <thead id="reportTableHead"></thead>
+                            <tbody id="reportTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+  </html>
